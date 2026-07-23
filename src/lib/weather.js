@@ -57,3 +57,13 @@ export async function loadJakartaWeather() {
     };
   }
 }
+
+/** React-friendly wrapper used by useWeather. */
+export async function fetchJakartaWeather() {
+  const data = await loadJakartaWeather();
+  if (!data.ok) throw new Error("Weather unavailable");
+  return {
+    weatherText: `${data.temp}°C · ${data.weather}`,
+    uvText: `${data.uvRounded} · ${data.uvLevel}`,
+  };
+}

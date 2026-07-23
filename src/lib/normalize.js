@@ -1,5 +1,22 @@
 import { EVENT_TIME_RANGES } from "./constants.js";
 
+export function defaultSleepData() {
+  return {
+    alarms: [],
+    logs: [],
+    timerRunning: false,
+    timerStartedAt: null,
+    timerElapsedMs: 0,
+  };
+}
+
+export function emptyGoals(min = 3) {
+  return Array.from({ length: min }, (_, i) => ({
+    id: `goal-${i + 1}`,
+    text: "",
+  }));
+}
+
 export function normalizeTask(task) {
   if (!task) return task;
   if (!Array.isArray(task.labels)) {

@@ -139,6 +139,12 @@ export function applyColourTheme(hex) {
   return vars;
 }
 
+export function applyTheme(theme, accent = DEFAULT_ACCENT) {
+  if (theme === "dark") return applyDarkTheme();
+  if (theme === "color" || theme === "colour") return applyColourTheme(accent);
+  return applyLightTheme();
+}
+
 export function applyFont(fontKey) {
   const key = FONT_CLASSES.some((c) => c === `font-${fontKey}`) ? fontKey : "sans-serif";
   FONT_CLASSES.forEach((cls) => document.body.classList.remove(cls));
