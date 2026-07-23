@@ -141,7 +141,7 @@ export function DataProvider({ children }) {
               ...cloud,
               moods: cloud.moods?.length ? cloud.moods : DEFAULT_MOODS.map((m) => ({ ...m })),
               goals: cloud.goals?.length ? cloud.goals : emptyGoals(MIN_GOALS),
-              sleep: cloud.sleep?.alarms ? cloud.sleep : defaultSleepData(),
+              sleep: Array.isArray(cloud.sleep?.alarms) ? cloud.sleep : defaultSleepData(),
             });
           }
         } else {
@@ -149,7 +149,7 @@ export function DataProvider({ children }) {
             ...cloud,
             moods: cloud.moods?.length ? cloud.moods : DEFAULT_MOODS.map((m) => ({ ...m })),
             goals: cloud.goals?.length ? cloud.goals : emptyGoals(MIN_GOALS),
-            sleep: cloud.sleep || defaultSleepData(),
+            sleep: Array.isArray(cloud.sleep?.alarms) ? cloud.sleep : { ...defaultSleepData(), ...(cloud.sleep || {}) },
           });
         }
         setStatus("ready");

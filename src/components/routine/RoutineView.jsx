@@ -54,10 +54,16 @@ export default function RoutineView({
 
   const periodLabel = useMemo(() => {
     if (viewMode === "weekly") {
-      return anchor.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      const start = new Date(anchor);
+      start.setDate(start.getDate() - start.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      const startLabel = start.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+      const endLabel = end.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      return `${startLabel} – ${endLabel}`;
     }
     if (viewMode === "monthly") {
-      return anchor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      return anchor.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
     }
     return String(anchor.getFullYear());
   }, [viewMode, anchor]);
@@ -70,85 +76,90 @@ export default function RoutineView({
     setAnchor(next);
   }
 
+  function moodCell(key) {
+    const mood = moods.find((m) => m.id === entries[key]);
+    const isToday = key === todayKey;
+    return (
+      <div
+        key={key}
+        className={`mood-cell${mood ? " filled" : ""}${isToday ? " today" : ""}`}
+        title={mood ? `${mood.emoji} ${mood.label}` : key}
+        style={mood ? { background: mood.color } : undefined}
+        aria-hidden="true"
+      >
+        {mood ? mood.emoji : ""}
+      </div>
+    );
+  }
+
   function chartCells() {
     const year = anchor.getFullYear();
     const month = anchor.getMonth();
+
     if (viewMode === "yearly") {
-      return MONTH_LETTERS.map((letter, monthIndex) => {
-        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-        const cells = [];
-        for (let day = 1; day <= daysInMonth; day += 1) {
-          const key = moodDateKey(year, monthIndex, day);
-          const moodId = entries[key];
-          const mood = moods.find((m) => m.id === moodId);
-          cells.push(
-            <div
-              key={key}
-              className="mood-day"
-              title={mood ? `${mood.label} · ${key}` : key}
-              style={mood ? { background: mood.color } : undefined}
-            />
-          );
-        }
-        return (
-          <div key={letter + monthIndex} className="mood-month-col">
-            <div className="mood-month-letter">{letter}</div>
-            <div className="mood-month-days">{cells}</div>
+      const cells = [<div key="corner" className="mood-chart-corner" />];
+      MONTH_LETTERS.forEach((letter, monthIndex) => {
+        cells.push(
+          <div key={`m-${monthIndex}`} className="mood-month-label">
+            {letter}
           </div>
         );
       });
+      for (let day = 1; day <= 31; day += 1) {
+        cells.push(
+          <div key={`d-${day}`} className="mood-day-label">
+            {day}
+          </div>
+        );
+        for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+          const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+          if (day > daysInMonth) {
+            cells.push(<div key={`inv-${monthIndex}-${day}`} className="mood-cell invalid" />);
+            continue;
+          }
+          cells.push(moodCell(moodDateKey(year, monthIndex, day)));
+        }
+      }
+      return cells;
     }
 
     if (viewMode === "monthly") {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       const firstDow = new Date(year, month, 1).getDay();
-      const cells = [];
-      for (let i = 0; i < firstDow; i += 1) cells.push(<div key={`e-${i}`} className="mood-day empty" />);
-      for (let day = 1; day <= daysInMonth; day += 1) {
-        const key = moodDateKey(year, month, day);
-        const mood = moods.find((m) => m.id === entries[key]);
-        cells.push(
-          <div
-            key={key}
-            className="mood-day"
-            title={mood ? `${mood.label} · ${key}` : key}
-            style={mood ? { background: mood.color } : undefined}
-          />
-        );
-      }
-      return (
-        <div className="mood-month-grid">
-          {WEEKDAY_SHORT.map((d) => (
-            <div key={d} className="mood-weekday">
-              {d}
-            </div>
-          ))}
-          {cells}
+      const cells = WEEKDAY_SHORT.map((d) => (
+        <div key={`wd-${d}`} className="mood-weekday-label">
+          {d}
         </div>
-      );
+      ));
+      for (let i = 0; i < firstDow; i += 1) {
+        cells.push(<div key={`e-${i}`} className="mood-cell invalid" />);
+      }
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        cells.push(moodCell(moodDateKey(year, month, day)));
+      }
+      return cells;
     }
 
     // weekly
     const start = new Date(anchor);
     start.setDate(start.getDate() - start.getDay());
-    return Array.from({ length: 7 }, (_, i) => {
+    const cells = WEEKDAY_SHORT.map((d) => (
+      <div key={`wd-${d}`} className="mood-weekday-label">
+        {d}
+      </div>
+    ));
+    for (let i = 0; i < 7; i += 1) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const key = moodDateKey(d.getFullYear(), d.getMonth(), d.getDate());
-      const mood = moods.find((m) => m.id === entries[key]);
-      return (
-        <div key={key} className="mood-week-cell">
-          <div className="mood-weekday">{WEEKDAY_SHORT[i]}</div>
-          <div
-            className="mood-day large"
-            style={mood ? { background: mood.color } : undefined}
-            title={mood ? mood.label : "No entry"}
-          >
-            {mood?.emoji || ""}
-          </div>
+      cells.push(
+        <div key={`w-${key}`}>
+          <div className="mood-week-daycap">{d.getDate()}</div>
+          {moodCell(key)}
         </div>
       );
-    });
+    }
+    return cells;
   }
 
   function onSaveNight() {
@@ -372,24 +383,40 @@ export default function RoutineView({
                   </button>
                 </div>
                 <div className="sleep-cal">
+                  {WEEKDAY_SHORT.map((d) => (
+                    <div key={`dow-${d}`} className="sleep-cal-dow">
+                      {d[0]}
+                    </div>
+                  ))}
                   {Array.from({ length: firstCalDow }).map((_, i) => (
-                    <div key={`pad-${i}`} className="sleep-cal-day empty" />
+                    <div key={`pad-${i}`} className="sleep-cal-cell empty" />
                   ))}
                   {Array.from({ length: daysInCal }, (_, i) => {
                     const day = i + 1;
                     const key = moodDateKey(calYear, calMonth, day);
                     const log = logMap[key];
-                    let mark = "";
+                    let cls = "";
+                    let mark = "·";
                     if (log) {
-                      if (log.minutes >= 540) mark = "⭐";
-                      else if (log.minutes >= 480) mark = "🌙";
-                      else if (log.minutes < 420) mark = "⚠️";
-                      else mark = "·";
+                      if (log.minutes >= 540) {
+                        cls = "great";
+                        mark = "⭐";
+                      } else if (log.minutes >= 480) {
+                        cls = "good";
+                        mark = "🌙";
+                      } else if (log.minutes < 420) {
+                        cls = "low";
+                        mark = "⚠️";
+                      }
                     }
                     return (
-                      <div key={key} className={`sleep-cal-day${log ? " has-log" : ""}`} title={log?.duration || ""}>
-                        <span>{day}</span>
-                        <span>{mark}</span>
+                      <div
+                        key={key}
+                        className={`sleep-cal-cell${cls ? ` ${cls}` : ""}`}
+                        title={log?.duration || ""}
+                      >
+                        <span className="sleep-cal-day">{day}</span>
+                        <span className="sleep-cal-icon">{log ? mark : ""}</span>
                       </div>
                     );
                   })}

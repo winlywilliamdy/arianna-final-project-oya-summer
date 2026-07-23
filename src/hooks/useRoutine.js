@@ -55,9 +55,20 @@ export function useGoals() {
   return { goals, updateGoal, addGoal, removeGoal };
 }
 
+function normalizeSleep(raw) {
+  const base = defaultSleepData();
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return base;
+  return {
+    ...base,
+    ...raw,
+    alarms: Array.isArray(raw.alarms) ? raw.alarms : [],
+    logs: Array.isArray(raw.logs) ? raw.logs : [],
+  };
+}
+
 export function useSleep() {
   const { bundle, setSleep } = useData();
-  const sleep = bundle.sleep || defaultSleepData();
+  const sleep = normalizeSleep(bundle.sleep);
 
   const addAlarm = useCallback(
     (alarm) => {
