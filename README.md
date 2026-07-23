@@ -1,20 +1,24 @@
-# Planner App (React + Neon)
+# Everyday Matters Tracker / Planner
 
-React rewrite of `fr-08-tasks.html` with **Vite + React**, and cloud data storage on **Neon (Postgres) via Vercel**.
+React app (Vite) with cloud data on **Neon Postgres** via Vercel serverless API.
 
 ## Folder structure
 
 ```text
-planner-app/
+.
 ├── api/data.js              # Vercel serverless API → Neon
 ├── db/schema.sql            # Run once in Neon SQL Editor
 ├── lib/server/db.js         # DB helpers
 ├── server/dev-api.mjs       # Local API for Vite proxy
+├── src/
+│   ├── lib/DataProvider.jsx # Loads/saves cloud + local cache
+│   ├── hooks/
+│   └── components/
+├── docs/
+│   ├── PRD.md
+│   └── fr-08-tasks.html     # Original HTML prototype
 ├── .env.example
-└── src/
-    ├── lib/DataProvider.jsx # Loads/saves cloud + local cache
-    ├── hooks/               # Tasks, settings, routine, events
-    └── components/
+└── vercel.json
 ```
 
 ## 1) Create Neon database (Vercel)
@@ -29,7 +33,6 @@ planner-app/
 ## 2) Local setup
 
 ```bash
-cd planner-app
 cp .env.example .env.local
 # paste DATABASE_URL into .env.local
 
@@ -54,12 +57,11 @@ Open the Vite URL (usually `http://localhost:5173`).
 
 ## Deploy to Vercel
 
+Import this GitHub repo in Vercel. Leave **Root Directory** as the repository root (default). Set `DATABASE_URL`, then deploy.
+
 ```bash
-cd planner-app
 npx vercel
 ```
-
-Make sure `DATABASE_URL` is set in the Vercel project env vars, then redeploy.
 
 ## Data that persists
 
