@@ -101,3 +101,18 @@ export function formatJakartaDate(date = new Date()) {
 export function hourToTime(h) {
   return `${String(h).padStart(2, "0")}:00`;
 }
+
+export function capitalize(s) {
+  const str = String(s || "");
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+export function capitalizeNameWords(name) {
+  return String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
