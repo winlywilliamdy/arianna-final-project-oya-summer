@@ -1,14 +1,15 @@
+import { readSessionToken, resolveSessionUser } from "../lib/server/auth.js";
 import { cors, ensureSchema, getSql, loadUserBundle, saveUserBundle } from "../lib/server/db.js";
 
-function readUserId(req) {
-  const header = req.headers["x-user-id"];
-  const queryId = req.query?.userId;
-  const bodyId = req.body?.userId;
-  return String(header || queryId || bodyId || "").trim();
-}
-
-function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+function readBody(req) {
+  if (typeof req.body === "string") {
+    try {
+      return JSON.parse(req.body || "{}");
+    } catch {
+      return {};
+    }
+  }
+  return req.body || {};
 }
 
 export default async function handler(req, res) {
@@ -19,14 +20,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const userId = readUserId(req);
-    if (!isUuid(userId)) {
-      res.status(400).json({ error: "Valid userId (UUID) is required." });
+    const sql = getSql();
+    await ensureSchema(sql);
+
+    const token = readSessionToken(req);
+    const sessionUser = await resolveSessionUser(sql, token);
+    if (!sessionUser) {
+      res.status(401).json({ error: "Please sign in to sync your data." });
       return;
     }
 
-    const sql = getSql();
-    await ensureSchema(sql);
+    const userId = sessionUser.id;
 
     if (req.method === "GET") {
       const data = await loadUserBundle(sql, userId);
@@ -35,7 +39,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "PUT" || req.method === "POST") {
-      const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+      const body = readBody(req);
       const data = await saveUserBundle(sql, userId, body);
       res.status(200).json({ ok: true, data });
       return;

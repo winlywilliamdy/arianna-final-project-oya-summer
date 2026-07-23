@@ -9,6 +9,9 @@ export default function SettingsView({
   setAccent,
   font,
   setFont,
+  accountUsername,
+  accountEmail,
+  onLogout,
 }) {
   function onUpload(e) {
     const file = e.target.files?.[0];
@@ -24,6 +27,21 @@ export default function SettingsView({
         <section className="settings-panel">
           <div className="settings-title">Settings</div>
           <div className="settings-subtitle">Personalize your home screen and app look.</div>
+
+          <div className="settings-group">
+            <div className="settings-label">Account</div>
+            <div className="settings-subtitle">
+              Signed in as <strong>@{accountUsername || "—"}</strong>
+              {accountEmail ? ` · ${accountEmail}` : ""}
+            </div>
+            {onLogout ? (
+              <div className="settings-actions">
+                <button type="button" className="settings-btn" onClick={onLogout}>
+                  Sign out
+                </button>
+              </div>
+            ) : null}
+          </div>
 
           <div className="settings-group">
             <label className="settings-label" htmlFor="user-name-input">

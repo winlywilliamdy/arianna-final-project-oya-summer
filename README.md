@@ -1,68 +1,43 @@
 # Everyday Matters Tracker / Planner
 
-React app (Vite) with cloud data on **Neon Postgres** via Vercel serverless API.
+React app (Vite) with **account login** and cloud data on **Neon Postgres** via Vercel.
 
 ## Folder structure
 
 ```text
 .
-├── api/data.js              # Vercel serverless API → Neon
-├── db/schema.sql            # Run once in Neon SQL Editor
-├── lib/server/db.js         # DB helpers
-├── server/dev-api.mjs       # Local API for Vite proxy
-├── src/
-│   ├── lib/DataProvider.jsx # Loads/saves cloud + local cache
-│   ├── hooks/
-│   └── components/
-├── docs/
-│   ├── PRD.md
-│   └── fr-08-tasks.html     # Original HTML prototype
-├── .env.example
-└── vercel.json
+├── api/
+│   ├── data.js              # Authenticated load/save → Neon
+│   └── auth/                # register, login, logout, me, username check
+├── db/schema.sql
+├── lib/server/              # DB + auth helpers
+├── server/dev-api.mjs
+└── src/
 ```
 
-## 1) Create Neon database (Vercel)
+## Accounts
 
-1. Open your project on [Vercel](https://vercel.com)
-2. Go to **Storage** → create / connect **Neon Postgres**
-3. Copy the **`DATABASE_URL`** connection string
-4. In Vercel → **Settings → Environment Variables**, add:
-   - `DATABASE_URL` = your Neon URL
-5. In the Neon SQL Editor, paste and run `db/schema.sql`
+- Create account with a **unique username** (letters, numbers, dots)
+- Optional **email** (also unique) — sign in with username **or** email
+- **Password**: at least 8 characters; only letters, numbers, `.`, and `/` (no commas or other symbols)
+- If a username is taken, registration shows “That username is taken”
+- Signing in on another browser/device loads the same saved data from Neon
 
-## 2) Local setup
+## Neon / Vercel
+
+1. Connect Neon and set `DATABASE_URL`
+2. Schema auto-migrates on API requests (or run `db/schema.sql` once)
+3. Deploy from repo root (default Root Directory)
+
+## Local setup
 
 ```bash
 cp .env.example .env.local
-# paste DATABASE_URL into .env.local
-
 npm install
-
-# terminal 1 — API (talks to Neon)
-npm run dev:api
-
-# terminal 2 — React app
-npm run dev
+npm run dev:api   # terminal 1
+npm run dev       # terminal 2
 ```
 
-Open the Vite URL (usually `http://localhost:5173`).
+## Data that persists per account
 
-## How storage works
-
-- Each browser gets a stable `planner-user-id` (UUID) in localStorage
-- App data is stored in Neon tables `users` + `user_data`
-- UI updates save locally immediately, then sync to Neon (debounced)
-- If Neon is unreachable, the app keeps working from the local cache
-- First successful cloud load migrates any existing localStorage data into Neon
-
-## Deploy to Vercel
-
-Import this GitHub repo in Vercel. Leave **Root Directory** as the repository root (default). Set `DATABASE_URL`, then deploy.
-
-```bash
-npx vercel
-```
-
-## Data that persists
-
-Tasks, deleted tasks, settings (name/theme/font/wallpaper), moods, mood entries, sleep, goals, and events.
+Tasks, deleted tasks, settings, moods, mood entries, sleep, goals, and events.

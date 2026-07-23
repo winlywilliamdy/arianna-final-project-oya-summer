@@ -1,4 +1,5 @@
 import { useState } from "react";
+import AuthView from "./components/auth/AuthView";
 import Sidebar from "./components/layout/Sidebar";
 import HomeView from "./components/home/HomeView";
 import TasksView from "./components/tasks/TasksView";
@@ -11,9 +12,11 @@ import { useJakartaClock, useWeather } from "./hooks/useJakartaClock";
 import { useSettings } from "./hooks/useSettings";
 import { useTasks } from "./hooks/useTasks";
 import { useEvents, useGoals, useMoods, useSleep } from "./hooks/useRoutine";
+import { useAuth } from "./lib/AuthProvider";
 import { useData } from "./lib/DataProvider";
 
 export default function App() {
+  const { status: authStatus, isAuthenticated, user, logout } = useAuth();
   const [view, setView] = useState("home");
   const { status, error } = useData();
   const { clock, date, now } = useJakartaClock();
@@ -25,11 +28,26 @@ export default function App() {
   const sleepApi = useSleep();
   const eventsApi = useEvents();
 
+  if (authStatus === "loading") {
+    return (
+      <div className="auth-screen">
+        <div className="auth-card">
+          <div className="auth-brand">Planner</div>
+          <p className="auth-subtitle">Checking your session…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthView />;
+  }
+
   return (
     <>
-      <Sidebar view={view} onNavigate={setView} />
+      <Sidebar view={view} onNavigate={setView} accountName={user?.username} onLogout={logout} />
       <main className="app-main">
-        {status !== "ready" ? (
+        {status !== "ready" && status !== "idle" ? (
           <div
             style={{
               position: "fixed",
@@ -45,7 +63,7 @@ export default function App() {
               maxWidth: 280,
             }}
           >
-            {status === "loading" && "Syncing with Neon…"}
+            {status === "loading" && "Syncing your account…"}
             {status === "offline" && (error || "Offline — local cache only")}
             {status === "error" && (error || "Save failed")}
           </div>
@@ -99,6 +117,9 @@ export default function App() {
             setAccent={settings.setAccent}
             font={settings.font}
             setFont={settings.setFont}
+            accountUsername={user?.username}
+            accountEmail={user?.email}
+            onLogout={logout}
           />
         ) : null}
 

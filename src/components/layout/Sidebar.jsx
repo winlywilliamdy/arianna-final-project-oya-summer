@@ -1,4 +1,4 @@
-export default function Sidebar({ view, onNavigate }) {
+export default function Sidebar({ view, onNavigate, accountName, onLogout }) {
   const items = [
     { id: "home", label: "Home" },
     { id: "tasks", label: "Tasks" },
@@ -9,6 +9,7 @@ export default function Sidebar({ view, onNavigate }) {
   return (
     <aside className="sidebar" aria-label="Main navigation">
       <div className="sidebar-brand">Planner</div>
+      {accountName ? <div className="sidebar-account">@{accountName}</div> : null}
       {items.map((item) => (
         <button
           key={item.id}
@@ -35,6 +36,11 @@ export default function Sidebar({ view, onNavigate }) {
       >
         Settings
       </button>
+      {onLogout ? (
+        <button type="button" className="nav-btn nav-logout" onClick={onLogout}>
+          Sign out
+        </button>
+      ) : null}
     </aside>
   );
 }

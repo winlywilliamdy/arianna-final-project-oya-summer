@@ -2,10 +2,11 @@ import http from "node:http";
 import { URL } from "node:url";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { cors, ensureSchema, getSql, loadUserBundle, saveUserBundle } from "../lib/server/db.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { cors } from "../lib/server/db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const apiRoot = path.join(__dirname, "..", "api");
 
 function loadEnvFile(filePath) {
   try {
@@ -39,8 +40,8 @@ function send(res, status, payload) {
   res.writeHead(status, {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,PUT,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-User-Id",
+    "Access-Control-Allow-Methods": "GET,PUT,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Session-Token, X-User-Id",
   });
   res.end(body);
 }
@@ -62,8 +63,43 @@ function readBody(req) {
   });
 }
 
-function isUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+function resolveApiModule(pathname) {
+  const rel = pathname.replace(/^\/api\/?/, "");
+  if (!rel || rel.includes("..")) return null;
+  const filePath = path.join(apiRoot, `${rel}.js`);
+  if (!fs.existsSync(filePath)) return null;
+  return filePath;
+}
+
+function makeRes(nodeRes) {
+  const headers = {};
+  return {
+    statusCode: 200,
+    setHeader(key, value) {
+      headers[key] = value;
+      nodeRes.setHeader(key, value);
+    },
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(payload) {
+      const body = JSON.stringify(payload);
+      if (!nodeRes.headersSent) {
+        nodeRes.writeHead(this.statusCode || 200, {
+          "Content-Type": "application/json",
+          ...headers,
+        });
+      }
+      nodeRes.end(body);
+    },
+    end(body) {
+      if (!nodeRes.headersSent) {
+        nodeRes.writeHead(this.statusCode || 204, headers);
+      }
+      nodeRes.end(body || "");
+    },
+  };
 }
 
 const server = http.createServer(async (req, res) => {
@@ -76,41 +112,27 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname !== "/api/data") {
+  const modulePath = resolveApiModule(url.pathname);
+  if (!modulePath) {
     send(res, 404, { error: "Not found" });
     return;
   }
 
   try {
-    const body = req.method === "GET" ? {} : await readBody(req);
-    const userId = String(
-      req.headers["x-user-id"] || url.searchParams.get("userId") || body.userId || ""
-    ).trim();
-
-    if (!isUuid(userId)) {
-      send(res, 400, { error: "Valid userId (UUID) is required." });
-      return;
-    }
-
-    const sql = getSql();
-    await ensureSchema(sql);
-
-    if (req.method === "GET") {
-      const data = await loadUserBundle(sql, userId);
-      send(res, 200, { ok: true, data });
-      return;
-    }
-
-    if (req.method === "PUT" || req.method === "POST") {
-      const data = await saveUserBundle(sql, userId, body);
-      send(res, 200, { ok: true, data });
-      return;
-    }
-
-    send(res, 405, { error: "Method not allowed" });
+    const body = ["GET", "HEAD"].includes(req.method) ? {} : await readBody(req);
+    const query = Object.fromEntries(url.searchParams.entries());
+    const fakeReq = {
+      method: req.method,
+      headers: req.headers,
+      body,
+      query,
+    };
+    const fakeRes = makeRes(res);
+    const mod = await import(pathToFileURL(modulePath).href + `?t=${Date.now()}`);
+    await mod.default(fakeReq, fakeRes);
   } catch (error) {
     console.error(error);
-    send(res, 500, { error: error?.message || "Server error" });
+    if (!res.headersSent) send(res, 500, { error: error?.message || "Server error" });
   }
 });
 
