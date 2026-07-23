@@ -1,0 +1,12 @@
+export const STORAGE_KEY = "fr08-tasks-v2";
+export const DELETED_STORAGE_KEY = "fr08-tasks-deleted";
+export const WALLPAPER_KEY = "fr08-home-wallpaper";
+export const USER_NAME_KEY = "fr08-user-name";
+export const THEME_KEY = "fr08-theme";
+export const ACCENT_COLOR_KEY = "fr08-accent-color";
+export const FONT_KEY = "fr08-font";
+export const MOODS_KEY = "fr08-moods-config";
+export const MOOD_ENTRIES_KEY = "fr08-mood-entries";
+export const SLEEP_KEY = "fr08-sleep-data";
+export const GOALS_KEY = "fr08-routine-goals";
+export const EVENTS_KEY = "fr08-events";

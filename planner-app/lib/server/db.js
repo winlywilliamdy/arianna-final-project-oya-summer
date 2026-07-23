@@ -1,0 +1,147 @@
+import { neon } from "@neondatabase/serverless";
+
+export function getSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("Missing DATABASE_URL. Add your Neon connection string in Vercel env vars.");
+  }
+  return neon(url);
+}
+
+export function cors(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-User-Id");
+}
+
+export function emptyPayload() {
+  return {
+    settings: {
+      name: "",
+      wallpaper: "",
+      theme: "light",
+      accent: "#9a8ad8",
+      font: "sans-serif",
+    },
+    tasks: [],
+    deletedTasks: [],
+    moods: [],
+    moodEntries: {},
+    sleep: {
+      alarms: [],
+      logs: [],
+      timerRunning: false,
+      timerStartedAt: null,
+      timerElapsedMs: 0,
+    },
+    goals: [],
+    events: [],
+  };
+}
+
+export async function ensureUser(sql, userId) {
+  await sql`
+    INSERT INTO users (id)
+    VALUES (${userId}::uuid)
+    ON CONFLICT (id) DO NOTHING
+  `;
+  await sql`
+    INSERT INTO user_data (user_id)
+    VALUES (${userId}::uuid)
+    ON CONFLICT (user_id) DO NOTHING
+  `;
+}
+
+export async function loadUserBundle(sql, userId) {
+  await ensureUser(sql, userId);
+
+  const rows = await sql`
+    SELECT
+      u.name,
+      u.wallpaper,
+      u.theme,
+      u.accent,
+      u.font,
+      d.tasks,
+      d.deleted_tasks,
+      d.moods,
+      d.mood_entries,
+      d.sleep,
+      d.goals,
+      d.events
+    FROM users u
+    JOIN user_data d ON d.user_id = u.id
+    WHERE u.id = ${userId}::uuid
+    LIMIT 1
+  `;
+
+  if (!rows.length) return emptyPayload();
+
+  const row = rows[0];
+  return {
+    settings: {
+      name: row.name || "",
+      wallpaper: row.wallpaper || "",
+      theme: row.theme || "light",
+      accent: row.accent || "#9a8ad8",
+      font: row.font || "sans-serif",
+    },
+    tasks: row.tasks || [],
+    deletedTasks: row.deleted_tasks || [],
+    moods: row.moods || [],
+    moodEntries: row.mood_entries || {},
+    sleep: row.sleep || emptyPayload().sleep,
+    goals: row.goals || [],
+    events: row.events || [],
+  };
+}
+
+export async function saveUserBundle(sql, userId, patch) {
+  await ensureUser(sql, userId);
+
+  if (patch.settings) {
+    const s = {
+      name: patch.settings.name ?? "",
+      wallpaper: patch.settings.wallpaper ?? "",
+      theme: patch.settings.theme ?? "light",
+      accent: patch.settings.accent ?? "#9a8ad8",
+      font: patch.settings.font ?? "sans-serif",
+    };
+    await sql`
+      UPDATE users SET
+        name = ${s.name},
+        wallpaper = ${s.wallpaper},
+        theme = ${s.theme},
+        accent = ${s.accent},
+        font = ${s.font},
+        updated_at = NOW()
+      WHERE id = ${userId}::uuid
+    `;
+  }
+
+  const current = await loadUserBundle(sql, userId);
+  const next = {
+    tasks: patch.tasks ?? current.tasks,
+    deletedTasks: patch.deletedTasks ?? current.deletedTasks,
+    moods: patch.moods ?? current.moods,
+    moodEntries: patch.moodEntries ?? current.moodEntries,
+    sleep: patch.sleep ?? current.sleep,
+    goals: patch.goals ?? current.goals,
+    events: patch.events ?? current.events,
+  };
+
+  await sql`
+    UPDATE user_data SET
+      tasks = ${JSON.stringify(next.tasks)}::jsonb,
+      deleted_tasks = ${JSON.stringify(next.deletedTasks)}::jsonb,
+      moods = ${JSON.stringify(next.moods)}::jsonb,
+      mood_entries = ${JSON.stringify(next.moodEntries)}::jsonb,
+      sleep = ${JSON.stringify(next.sleep)}::jsonb,
+      goals = ${JSON.stringify(next.goals)}::jsonb,
+      events = ${JSON.stringify(next.events)}::jsonb,
+      updated_at = NOW()
+    WHERE user_id = ${userId}::uuid
+  `;
+
+  return loadUserBundle(sql, userId);
+}
