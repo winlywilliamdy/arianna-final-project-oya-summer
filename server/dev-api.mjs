@@ -3,7 +3,7 @@ import { URL } from "node:url";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { cors, getSql, loadUserBundle, saveUserBundle } from "../lib/server/db.js";
+import { cors, ensureSchema, getSql, loadUserBundle, saveUserBundle } from "../lib/server/db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -93,6 +93,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     const sql = getSql();
+    await ensureSchema(sql);
 
     if (req.method === "GET") {
       const data = await loadUserBundle(sql, userId);

@@ -1,4 +1,4 @@
-import { cors, getSql, loadUserBundle, saveUserBundle } from "../lib/server/db.js";
+import { cors, ensureSchema, getSql, loadUserBundle, saveUserBundle } from "../lib/server/db.js";
 
 function readUserId(req) {
   const header = req.headers["x-user-id"];
@@ -26,6 +26,7 @@ export default async function handler(req, res) {
     }
 
     const sql = getSql();
+    await ensureSchema(sql);
 
     if (req.method === "GET") {
       const data = await loadUserBundle(sql, userId);
