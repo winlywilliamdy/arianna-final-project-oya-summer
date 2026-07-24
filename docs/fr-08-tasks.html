@@ -52,10 +52,16 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+
     body {
       font-family: var(--app-font);
       background: var(--page-bg);
       color: var(--text);
+      height: 100%;
       height: 100vh;
       height: 100dvh;
       min-height: 100vh;
@@ -71,7 +77,8 @@
     body.font-playfair { --app-font: "Playfair Display", Georgia, serif; }
 
     .sidebar {
-      width: 196px;
+      --sidebar-width: 196px;
+      width: var(--sidebar-width);
       flex-shrink: 0;
       height: 100vh;
       height: 100dvh;
@@ -82,9 +89,9 @@
       display: flex;
       flex-direction: column;
       gap: var(--gap-tight);
-      position: sticky;
+      position: fixed;
+      left: 0;
       top: 0;
-      align-self: flex-start;
       overflow-y: auto;
       z-index: 30;
     }
@@ -539,6 +546,7 @@
       flex: 1;
       min-width: 0;
       min-height: 0;
+      margin-left: var(--sidebar-width, 196px);
       height: 100vh;
       height: 100dvh;
       overflow-x: hidden;
@@ -1581,7 +1589,8 @@
     .date-fields.hidden { display: none; }
 
     /* ── Routine / mood year chart ── */
-    .routine-wrap {
+    .routine-wrap,
+    .sleep-wrap {
       display: flex;
       flex-direction: column;
       gap: var(--gap);
@@ -2729,6 +2738,7 @@
         height: auto;
         min-height: auto;
         position: relative;
+        left: auto;
         top: auto;
         align-self: stretch;
         overflow: visible;
@@ -2754,6 +2764,7 @@
       .nav-btn.nav-deleted,
       .nav-btn.nav-settings { flex: 0 0 auto; }
       .app-main {
+        margin-left: 0;
         height: auto;
         flex: 1;
         min-height: 0;
@@ -2866,6 +2877,7 @@
     <button type="button" class="nav-btn active" id="nav-home" data-view="home">Home</button>
     <button type="button" class="nav-btn" id="nav-tasks" data-view="tasks">Tasks</button>
     <button type="button" class="nav-btn" id="nav-routine" data-view="routine">Routine</button>
+    <button type="button" class="nav-btn" id="nav-sleep" data-view="sleep">Sleep</button>
     <button type="button" class="nav-btn" id="nav-events" data-view="events">Events</button>
     <div class="sidebar-spacer" aria-hidden="true"></div>
     <hr class="sidebar-divider" />
@@ -3117,7 +3129,11 @@
             </div>
           </div>
         </section>
+      </div>
+    </section>
 
+    <section class="view" id="view-sleep" hidden>
+      <div class="wrap sleep-wrap">
         <section class="sleep-panel" aria-label="Sleep">
           <div class="sleep-title">Sleep</div>
           <div class="sleep-subtitle">Alarm, track nights, and time how long you sleep.</div>
@@ -3923,6 +3939,7 @@
     const viewDeleted = document.getElementById("view-deleted");
     const viewSettings = document.getElementById("view-settings");
     const viewRoutine = document.getElementById("view-routine");
+    const viewSleep = document.getElementById("view-sleep");
     const viewEvents = document.getElementById("view-events");
     const appMain = document.querySelector(".app-main");
     const navHome = document.getElementById("nav-home");
@@ -3930,6 +3947,7 @@
     const navDeleted = document.getElementById("nav-deleted");
     const navSettings = document.getElementById("nav-settings");
     const navRoutine = document.getElementById("nav-routine");
+    const navSleep = document.getElementById("nav-sleep");
     const navEvents = document.getElementById("nav-events");
 
     const WALLPAPER_KEY = "fr08-home-wallpaper";
@@ -3955,16 +3973,19 @@
       viewDeleted.hidden = view !== "deleted";
       viewSettings.hidden = view !== "settings";
       viewRoutine.hidden = view !== "routine";
+      viewSleep.hidden = view !== "sleep";
       viewEvents.hidden = view !== "events";
       navHome.classList.toggle("active", view === "home");
       navTasks.classList.toggle("active", view === "tasks");
       navDeleted.classList.toggle("active", view === "deleted");
       navSettings.classList.toggle("active", view === "settings");
       navRoutine.classList.toggle("active", view === "routine");
+      navSleep.classList.toggle("active", view === "sleep");
       navEvents.classList.toggle("active", view === "events");
       appMain.scrollTop = 0;
       if (view === "deleted") renderDeletedTasks(loadDeletedTasks());
       if (view === "routine") renderRoutine();
+      if (view === "sleep") renderSleep();
       if (view === "events") {
         fillEventTimeOptions(eventTime.value);
         renderEvents();
@@ -3976,6 +3997,7 @@
     navDeleted.addEventListener("click", () => showView("deleted"));
     navSettings.addEventListener("click", () => showView("settings"));
     navRoutine.addEventListener("click", () => showView("routine"));
+    navSleep.addEventListener("click", () => showView("sleep"));
     navEvents.addEventListener("click", () => showView("events"));
     binWrap.addEventListener("click", () => showView("deleted"));
     binToggle.addEventListener("click", (e) => {
@@ -4627,7 +4649,6 @@
       renderMoodKey();
       renderMoodChart();
       renderGoals();
-      renderSleep();
     }
 
     /* ── Sleep tools ── */
