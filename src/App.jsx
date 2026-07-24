@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AuthView from "./components/auth/AuthView";
 import Sidebar from "./components/layout/Sidebar";
 import HomeView from "./components/home/HomeView";
@@ -6,6 +6,7 @@ import TasksView from "./components/tasks/TasksView";
 import DeletedView from "./components/deleted/DeletedView";
 import SettingsView from "./components/settings/SettingsView";
 import RoutineView from "./components/routine/RoutineView";
+import SleepView from "./components/sleep/SleepView";
 import EventsView from "./components/events/EventsView";
 import { NameSetupModal, NameTipModal } from "./components/modals/NameModals";
 import { useJakartaClock, useWeather } from "./hooks/useJakartaClock";
@@ -18,6 +19,7 @@ import { useData } from "./lib/DataProvider";
 export default function App() {
   const { status: authStatus, isAuthenticated, user, logout } = useAuth();
   const [view, setView] = useState("home");
+  const mainRef = useRef(null);
   const { status, error } = useData();
   const { clock, date, now } = useJakartaClock();
   const { weatherText, uvText } = useWeather();
@@ -27,6 +29,10 @@ export default function App() {
   const goalsApi = useGoals();
   const sleepApi = useSleep();
   const eventsApi = useEvents();
+
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [view]);
 
   if (authStatus === "loading") {
     return (
@@ -46,7 +52,7 @@ export default function App() {
   return (
     <>
       <Sidebar view={view} onNavigate={setView} accountName={user?.username} onLogout={logout} />
-      <main className="app-main">
+      <main className="app-main" ref={mainRef}>
         {status !== "ready" && status !== "idle" ? (
           <div
             style={{
@@ -133,6 +139,11 @@ export default function App() {
             updateGoal={goalsApi.updateGoal}
             addGoal={goalsApi.addGoal}
             removeGoal={goalsApi.removeGoal}
+          />
+        ) : null}
+
+        {view === "sleep" ? (
+          <SleepView
             sleep={sleepApi.sleep}
             addAlarm={sleepApi.addAlarm}
             toggleAlarm={sleepApi.toggleAlarm}

@@ -3,6 +3,7 @@ export default function Sidebar({ view, onNavigate, accountName, onLogout }) {
     { id: "home", label: "Home" },
     { id: "tasks", label: "Tasks" },
     { id: "routine", label: "Routine" },
+    { id: "sleep", label: "Sleep" },
     { id: "events", label: "Events" },
   ];
 
